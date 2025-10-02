@@ -47,6 +47,10 @@ If you customized some files after building, it may be necessary to clean the pr
 	sudo lb clean --binary
 	git restore .build/config
 
+Sometimes it might even be necessary to remove the cache directory, it was required when I updated my debian from 12 to 13 to get the latest package versions and kernel inside the image:
+
+	sudo rm -rf cache/
+
 ## iSCSI
 
 This image previously was designed to serve an iSCSI target. If you cannot use NVMe (which you should if you can), take a look at the iscsi tag: https://github.com/mh0rst/nvmetcp-live/tree/iscsi
