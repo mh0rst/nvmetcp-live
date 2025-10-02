@@ -18,6 +18,7 @@ echo 1 > enable
 
 echo -n "Waiting for $INTERFACE to come up"
 until ip a s dev $INTERFACE; do sleep 1; echo -n "."; done
+echo ""
 
 mkdir /sys/kernel/config/nvmet/ports/1
 cd /sys/kernel/config/nvmet/ports/1
@@ -25,4 +26,6 @@ echo "ipv4" > addr_adrfam
 echo "tcp" > addr_trtype
 echo $PORT > addr_trsvcid
 echo $OWN_IP > addr_traddr
+echo -n "Waiting for nvme port to come up"
+until [ -e /sys/kernel/config/nvmet/ports/1/subsystems ]; do sleep 1; echo -n "."; done
 ln -s /sys/kernel/config/nvmet/subsystems/maindisk /sys/kernel/config/nvmet/ports/1/subsystems/maindisk

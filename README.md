@@ -16,7 +16,7 @@ The image is configured to run headless, just customize to your needs, build, fl
 
 ## Requirements for building
 
-You need a Debian bookworm (12) Linux distribution to build the image, as well as the live-build package:
+You need a Debian trixie (13) Linux distribution to build the image, as well as the live-build package:
 
 	apt install sudo live-build
 
