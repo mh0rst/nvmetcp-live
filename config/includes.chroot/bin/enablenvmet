@@ -26,6 +26,15 @@ echo "ipv4" > addr_adrfam
 echo "tcp" > addr_trtype
 echo $PORT > addr_trsvcid
 echo $OWN_IP > addr_traddr
-echo -n "Waiting for nvme port to come up"
+echo -n "Waiting for resources to come up"
 until [ -e /sys/kernel/config/nvmet/ports/1/subsystems ]; do sleep 1; echo -n "."; done
-ln -s /sys/kernel/config/nvmet/subsystems/maindisk /sys/kernel/config/nvmet/ports/1/subsystems/maindisk
+until [ -e /sys/kernel/config/nvmet/subsystems/maindisk ]; do sleep 1; echo -n "."; done
+echo ""
+echo -n "Waiting for successful disk binding"
+while true
+do
+	ln -s /sys/kernel/config/nvmet/subsystems/maindisk /sys/kernel/config/nvmet/ports/1/subsystems/maindisk
+	if [ $? == 0 ]; then break; fi;
+	echo "."
+	sleep 1
+done
