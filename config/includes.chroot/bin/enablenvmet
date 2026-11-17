@@ -1,40 +1,48 @@
 #!/bin/sh
 
+set -eu
+
 # NOTE: You also need to change the IP in ../etc/network/interfaces file!
 OWN_IP=192.168.250.2
 INTERFACE=thunderbolt0
 PORT=4420
+SUBSYSTEM=/sys/kernel/config/nvmet/subsystems/maindisk
+NAMESPACE=$SUBSYSTEM/namespaces/1
+PORT_DIR=/sys/kernel/config/nvmet/ports/1
+LINK=$PORT_DIR/subsystems/maindisk
+
+# Do not rewrite attributes of an already enabled port on repeated runs.
+if [ -e "$LINK" ] || [ -L "$LINK" ]; then
+        if [ ! -L "$LINK" ] || [ "$(readlink -f "$LINK")" != "$SUBSYSTEM" ]; then
+                echo "Unexpected existing target at $LINK" >&2
+                exit 1
+        fi
+        echo "NVMe/TCP target maindisk is already enabled"
+        exit 0
+fi
 
 # Setup NVMe/TCP subsystem
-mkdir /sys/kernel/config/nvmet/subsystems/maindisk
-cd /sys/kernel/config/nvmet/subsystems/maindisk
-echo 1 > attr_allow_any_host
-mkdir namespaces/1
-cd namespaces/1
-echo -n /dev/nvme0n1 > device_path
-echo 1 > enable
+mkdir -p "$NAMESPACE"
+echo 1 > "$SUBSYSTEM/attr_allow_any_host"
+if [ "$(cat "$NAMESPACE/enable")" != 1 ]; then
+        printf '%s' /dev/nvme0n1 > "$NAMESPACE/device_path"
+        echo 1 > "$NAMESPACE/enable"
+fi
 
 # Setup NVMe/TCP target port
+echo "Waiting for $INTERFACE to appear"
+until ip link show dev "$INTERFACE" > /dev/null 2>&1; do sleep 1; done
 
-echo -n "Waiting for $INTERFACE to come up"
-until ip a s dev $INTERFACE; do sleep 1; echo -n "."; done
-echo ""
+mkdir -p "$PORT_DIR"
+echo "ipv4" > "$PORT_DIR/addr_adrfam"
+echo "tcp" > "$PORT_DIR/addr_trtype"
+echo "$PORT" > "$PORT_DIR/addr_trsvcid"
+echo "$OWN_IP" > "$PORT_DIR/addr_traddr"
 
-mkdir /sys/kernel/config/nvmet/ports/1
-cd /sys/kernel/config/nvmet/ports/1
-echo "ipv4" > addr_adrfam
-echo "tcp" > addr_trtype
-echo $PORT > addr_trsvcid
-echo $OWN_IP > addr_traddr
-echo -n "Waiting for resources to come up"
-until [ -e /sys/kernel/config/nvmet/ports/1/subsystems ]; do sleep 1; echo -n "."; done
-until [ -e /sys/kernel/config/nvmet/subsystems/maindisk ]; do sleep 1; echo -n "."; done
-echo ""
-echo -n "Waiting for successful disk binding"
-while true
-do
-	ln -s /sys/kernel/config/nvmet/subsystems/maindisk /sys/kernel/config/nvmet/ports/1/subsystems/maindisk
-	if [ $? == 0 ]; then break; fi;
-	echo "."
-	sleep 1
+# Linking starts the TCP listener. The interface can exist before OWN_IP is
+# assigned, so retry the bind itself rather than guessing network readiness.
+echo "Waiting for NVMe/TCP listener at $OWN_IP:$PORT"
+until ln -sT "$SUBSYSTEM" "$LINK"; do
+        sleep 1
 done
+echo "NVMe/TCP target maindisk ready at $OWN_IP:$PORT"

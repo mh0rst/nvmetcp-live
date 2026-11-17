@@ -1,0 +1,8 @@
+iperf3
+tcpdump
+pciutils
+usbutils
+nvme-cli
+iputils-ping
+iputils-arping
+
