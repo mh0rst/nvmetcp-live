@@ -1,1 +1,1 @@
-ifupdown isc-dhcp-client
+ifupdown dhcpcd-base
