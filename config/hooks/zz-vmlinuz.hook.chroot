@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+# Workaround for sid linux 7.x packaging: vmlinuz now lives in
+# /usr/lib/modules/<kver>/vmlinuz instead of /boot/vmlinuz-<kver>.
+mkdir -p /boot
+for d in /usr/lib/modules/*/; do
+    [ -f "${d}vmlinuz" ] || continue
+    kver="$(basename "$d")"
+    cp "${d}vmlinuz" "/boot/vmlinuz-${kver}"
+done
